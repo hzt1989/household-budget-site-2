@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小家账本 · 一家人的钱，花得明白</title>
+<meta name="description" content="小家账本：记一笔账、看月度收支、管分类预算、按周复盘，全家人的钱都算得明白。数据只存在你自己的浏览器里。">
+<link rel="stylesheet" href="./theme.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="shell masthead-in">
+    <a class="logo" href="#/home"><span class="logo-badge">账</span><span class="logo-word">小家账本</span><span class="logo-tag">一家人的钱，花得明白</span></a>
+    <nav class="tabs" aria-label="主导航">
+      <a href="#/home" data-tab="home">总览</a>
+      <a href="#/new" data-tab="new">记一笔</a>
+      <a href="#/list" data-tab="list">账单</a>
+      <a href="#/plan" data-tab="plan">预算</a>
+      <a href="#/report" data-tab="report">统计</a>
+    </nav>
+  </div>
+</header>
+
+<div class="shell">
+  <div class="month-switch" role="group" aria-label="选择月份">
+    <button id="monthPrev" type="button" aria-label="上个月">‹</button>
+    <span id="monthNow" class="month-now">2026年11月</span>
+    <button id="monthNext" type="button" aria-label="下个月">›</button>
+    <button id="monthBack" type="button" class="text-btn">回到本月</button>
+    <span id="monthHint" class="month-hint"></span>
+  </div>
+
+  <!-- 总览 -->
+  <main id="page-home" class="page">
+    <section class="stat-grid" aria-label="本月收支总览">
+      <div class="stat-card in"><span class="stat-key">本月收入</span><strong id="statIn" class="stat-num">¥0</strong><span id="statInCount" class="stat-sub">0 笔</span></div>
+      <div class="stat-card out"><span class="stat-key">本月支出</span><strong id="statOut" class="stat-num">¥0</strong><span id="statOutCount" class="stat-sub">0 笔</span></div>
+      <div class="stat-card left"><span class="stat-key">本月结余</span><strong id="statLeft" class="stat-num">¥0</strong><span id="statLeftNote" class="stat-sub">收入 − 支出</span></div>
+      <div class="stat-card plan"><span class="stat-key">预算用了多少</span><strong id="statPlan" class="stat-num">—</strong><span id="statPlanNote" class="stat-sub">尚未设置预算</span></div>
+    </section>
+
+    <section id="blankBox" class="panel blank" hidden>
+      <h2>这个月还是白纸一张</h2>
+      <p>记下第一笔，全家人的收支就开始有数了。想先看看这个站能干什么，就载入一份示例数据逛逛——示例随时可以一键清空，不会留下来。</p>
+      <div class="btn-row center">
+        <a class="btn solid" href="#/new">记第一笔</a>
+        <button id="sampleBlank" type="button" class="btn">载入示例数据看看</button>
+      </div>
+    </section>
+
+    <div id="homeBody" class="two-col">
+      <section class="panel" aria-label="本月支出分类">
+        <div class="panel-head"><h2>本月支出去哪了</h2><a class="text-btn" href="#/report">看统计 ›</a></div>
+        <div class="ring-box">
+          <canvas id="ringCanvas" width="250" height="250" role="img" aria-label="本月支出分类环形图"></canvas>
+          <ul id="ringList" class="key-list"></ul>
+        </div>
+        <p id="ringNone" class="dim" hidden>本月还没有支出，记一笔就有了。</p>
+      </section>
+
+      <section class="panel" aria-label="最近记账">
+        <div class="panel-head"><h2>最近记账</h2><a class="text-btn" href="#/list">全部账单 ›</a></div>
+        <ul id="freshList" class="entry-list"></ul>
+        <p id="freshNone" class="dim" hidden>最近还没有记账。</p>
+      </section>
+    </div>
+
+    <section id="warnBox" class="panel" aria-label="预算提醒">
+      <div class="panel-head"><h2>预算提醒</h2><a class="text-btn" href="#/plan">管预算 ›</a></div>
+      <ul id="warnList" class="warn-list"></ul>
+      <p id="warnNone" class="dim" hidden>各分类都在预算内，继续保持。</p>
+    </section>
+  </main>
+
+  <!-- 记一笔 -->
+  <main id="page-new" class="page" hidden>
+    <section class="panel form-panel">
+      <h2 id="entryTitle">记一笔</h2>
+      <p class="dim">一笔就是一条记录：花了多少钱，还是挣了多少钱，记清楚，月底一算就明白。</p>
+      <form id="entryForm" novalidate>
+        <div class="kind-switch" role="group" aria-label="收支类型">
+          <button type="button" id="kindOut" class="kind-btn on" aria-pressed="true">支出</button>
+          <button type="button" id="kindIn" class="kind-btn" aria-pressed="false">收入</button>
+        </div>
+        <label class="field">分类
+          <select id="fCat" required></select>
+        </label>
+        <label class="field">金额（元）
+          <input id="fAmt" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="例如 128.50" required>
+        </label>
+        <div class="chips" aria-label="快捷金额">
+          <span class="chips-label">快速加：</span>
+          <button type="button" class="chip" data-add="10">+10</button>
+          <button type="button" class="chip" data-add="50">+50</button>
+          <button type="button" class="chip" data-add="100">+100</button>
+          <button type="button" class="chip" data-add="200">+200</button>
+        </div>
+        <p id="amtTip" class="amt-tip" hidden></p>
+        <label class="field">日期
+          <input id="fDate" type="date" required>
+        </label>
+        <label class="field">备注
+          <input id="fNote" type="text" maxlength="60" placeholder="写一句这笔钱是干什么的（可选）">
+        </label>
+        <p id="formMsg" class="form-msg" role="alert" hidden></p>
+        <div class="btn-row">
+          <button type="submit" class="btn solid">保存这笔</button>
+          <button type="button" id="formBack" class="btn">取消</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <!-- 账单 -->
+  <main id="page-list" class="page" hidden>
+    <section class="panel">
+      <div class="panel-head"><h2>账单</h2><span id="listCount" class="dim"></span></div>
+      <div class="filter-bar">
+        <label>类型
+          <select id="fltKind">
+            <option value="all">全部</option>
+            <option value="expense">支出</option>
+            <option value="income">收入</option>
+          </select>
+        </label>
+        <label>分类
+          <select id="fltCat"><option value="all">全部分类</option></select>
+        </label>
+        <label class="filter-q">搜备注
+          <input id="fltQ" type="search" placeholder="输入备注里的字，高亮显示">
+        </label>
+      </div>
+      <ul id="listRows" class="entry-list"></ul>
+      <p id="listNone" class="dim" hidden>这个月还没有符合条件的账单，换个筛选条件试试。</p>
+      <div class="list-foot">
+        <span>本页合计：支出 <strong id="listOut">¥0</strong> · 收入 <strong id="listIn">¥0</strong></span>
+        <a class="btn" href="#/new">再记一笔</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- 预算 -->
+  <main id="page-plan" class="page" hidden>
+    <section class="panel">
+      <div class="panel-head"><h2>分类预算</h2><span class="dim">按月算，超了就提醒</span></div>
+      <p class="dim">给每个支出分类定一个每月上限。花到 80% 会提醒，超了会标红并告诉你超了多少。预算只管支出，不管收入。</p>
+      <label class="carry-line"><input id="carryToggle" type="checkbox"> 把上月没花完的预算转结到本月（上月剩余自动算进本月可用额度）</label>
+      <div class="plan-total">
+        <span>本月预算总额 <strong id="planTotal">¥0</strong></span>
+        <span>已花 <strong id="planUsed">¥0</strong></span>
+        <span>还剩 <strong id="planRemain">¥0</strong></span>
+        <span id="planCarry" class="dim"></span>
+      </div>
+      <ul id="planList" class="plan-list"></ul>
+      <div class="btn-row">
+        <button id="planSave" type="button" class="btn solid">保存预算</button>
+        <span id="planDone" class="saved-note" role="status" hidden>已保存</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- 统计 -->
+  <main id="page-report" class="page" hidden>
+    <section class="panel">
+      <div class="panel-head"><h2>最近六个月</h2><span class="dim">收入和支出对照</span></div>
+      <canvas id="trendCanvas" width="900" height="320" role="img" aria-label="最近六个月收支柱状图"></canvas>
+      <p id="trendNone" class="dim" hidden>还没有跨月的数据，记满两个月就能对照了。</p>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>按周复盘</h2><span class="dim">看看这周花得比上周多还是少</span></div>
+      <label class="field week-pick">选一周
+        <select id="weekPick"></select>
+      </label>
+      <p id="weekLine" class="week-line"></p>
+      <canvas id="weekCanvas" width="900" height="240" role="img" aria-label="所选一周每日支出柱状图"></canvas>
+      <p id="weekNone" class="dim" hidden>这一周还没有支出。</p>
+    </section>
+    <div class="two-col">
+      <section class="panel">
+        <div class="panel-head"><h2>本月每天花多少</h2><span class="dim">按天汇总的支出</span></div>
+        <canvas id="dailyCanvas" width="440" height="260" role="img" aria-label="本月每日支出柱状图"></canvas>
+        <p id="dailyNone" class="dim" hidden>本月还没有支出。</p>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>本月支出排行</h2><span class="dim">花得最多的分类</span></div>
+        <ol id="topList" class="top-list"></ol>
+        <p id="topNone" class="dim" hidden>本月还没有支出。</p>
+      </section>
+    </div>
+    <section class="panel">
+      <div class="panel-head"><h2>我的数据</h2><span class="dim">只存在这台设备的浏览器里</span></div>
+      <p class="dim">所有账单和预算都保存在你浏览器的 localStorage 里，不上传、不联网。换设备就看不到了，导出一份 CSV 自己留着最稳妥。</p>
+      <div class="btn-row">
+        <button id="doExport" type="button" class="btn">导出 CSV</button>
+        <button id="doSample" type="button" class="btn">载入示例数据</button>
+        <button id="doWipe" type="button" class="btn warn">清空全部数据</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <p>小家账本 · 数据只存在你自己的浏览器里，不上传、不联网。记账这件事，坚持三个月，家里的钱就清楚了。</p>
+  </footer>
+</div>
+
+<script type="module" src="./ui.js"></script>
+</body>
+</html>
